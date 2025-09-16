@@ -1,0 +1,105 @@
+{
+  "$schema": "https://agentsmd.dev/schema/v0.1/agents.rules.json",
+  "schemaVersion": "0.1.0",
+  "generated": "2025-09-16",
+  "repo": "JeyZu/FreelanceFinder",
+  "rules": [
+    {
+      "ruleId": "naming.layout",
+      "scope": "repo",
+      "severity": "error",
+      "description": "Monorepo layout fixed (apps/web, apps/api, packages/config, packages/types). Files kebab-case.ts(x), exports camelCase/PascalCase.",
+      "examples": {
+        "do": "search-result.ts",
+        "dont": "SearchResult.ts"
+      }
+    },
+    {
+      "ruleId": "typescript.strict",
+      "scope": "repo",
+      "severity": "error",
+      "description": "TypeScript strict mode enforced. No unchecked any or silent ts-ignore.",
+      "examples": {
+        "do": "function add(a: number, b: number): number",
+        "dont": "function add(a, b) { return a + b }"
+      }
+    },
+    {
+      "ruleId": "validation.zod",
+      "scope": "repo",
+      "severity": "error",
+      "description": "Zod must be used for all input/output validation across web+api.",
+      "examples": {
+        "do": "z.object({ id: z.string() })",
+        "dont": "JSON.parse(body) without schema"
+      }
+    },
+    {
+      "ruleId": "api.wrapper",
+      "scope": "apps/web",
+      "severity": "error",
+      "description": "No direct fetch in components. All requests go through lib/api.ts wrapper with zod validation.",
+      "examples": {
+        "do": "await api.search(query)",
+        "dont": "await fetch('/api/search')"
+      }
+    },
+    {
+      "ruleId": "api.result-envelope",
+      "scope": "apps/api",
+      "severity": "error",
+      "description": "API responses must return a typed Result<T> envelope: { ok: true, data } | { ok: false, error }.",
+      "examples": {
+        "do": "return { ok: true, data }",
+        "dont": "return data"
+      }
+    },
+    {
+      "ruleId": "logging.util",
+      "scope": "repo",
+      "severity": "error",
+      "description": "Use shared logger util. No stray console.log.",
+      "examples": {
+        "do": "logger.info('started')",
+        "dont": "console.log('started')"
+      }
+    },
+    {
+      "ruleId": "git.commits",
+      "scope": "repo",
+      "severity": "error",
+      "description": "Commits must follow Conventional Commits (feat(api): ...). Branches must follow feat/fix/chore/<scope>-<slug>.",
+      "examples": {
+        "do": "feat(web): add search page",
+        "dont": "added search page"
+      }
+    },
+    {
+      "ruleId": "env.usage",
+      "scope": "repo",
+      "severity": "error",
+      "description": "No committed .env files. Each app must provide .env.example and load env vars only via process.env.",
+      "examples": {
+        "do": "NEXT_PUBLIC_API_URL in .env.example",
+        "dont": "hardcoded 'http://localhost:3001'"
+      }
+    },
+    {
+      "ruleId": "testing.vitest",
+      "scope": "repo",
+      "severity": "warning",
+      "description": "Vitest used for unit tests. Colocate *.test.ts next to code. Critical behaviors only.",
+      "examples": {
+        "do": "user-service.test.ts",
+        "dont": "tests/user-service.spec.js"
+      }
+    },
+    {
+      "ruleId": "playwright.smoke",
+      "scope": "apps/web",
+      "severity": "info",
+      "description": "Playwright E2E tests will be added later for smoke flows (home loads, nav works).",
+      "examples": {}
+    }
+  ]
+}
