@@ -1,0 +1,23 @@
+{
+  "name": "freelancefinder",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@8.15.5",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test"
+  },
+  "devDependencies": {
+    "@freelancefinder/config": "workspace:*",
+    "@typescript-eslint/eslint-plugin": "^7.9.0",
+    "@typescript-eslint/parser": "^7.9.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.2.5",
+    "turbo": "^1.13.3",
+    "typescript": "^5.4.5"
+  }
+}

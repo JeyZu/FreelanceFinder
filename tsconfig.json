@@ -1,0 +1,5 @@
+{
+  "extends": "@freelancefinder/config/tsconfig/base.json",
+  "compilerOptions": {},
+  "include": []
+}
