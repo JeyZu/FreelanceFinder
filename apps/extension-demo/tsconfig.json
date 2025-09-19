@@ -1,0 +1,16 @@
+{
+  "extends": "@freelancefinder/config/tsconfig/base.json",
+  "compilerOptions": {
+    "lib": ["ES2021", "DOM", "DOM.Iterable"],
+    "types": ["chrome"],
+    "module": "ESNext",
+    "target": "ES2021",
+    "moduleResolution": "Node",
+    "allowJs": false,
+    "baseUrl": ".",
+    "paths": {
+      "#detectors/*": ["../../packages/detectors/src/*"]
+    }
+  },
+  "include": ["src/**/*"]
+}

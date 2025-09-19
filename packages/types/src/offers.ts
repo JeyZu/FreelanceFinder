@@ -13,7 +13,7 @@ export interface OfferEvidence {
   selector?: string;
 }
 
-export interface OfferDetectionItem {
+export interface JobOffer {
   source: "FreeWork" | string;
   url: string;
   title?: string;
@@ -34,6 +34,8 @@ export interface OfferDetectionItem {
   evidence: OfferEvidence[];
 }
 
+export type OfferDetectionItem = JobOffer;
+
 export type DetectionPageType = "detail" | "list" | "unknown";
 
 export interface DetectionOptions {
@@ -43,14 +45,18 @@ export interface DetectionOptions {
   now?: () => Date;
 }
 
-export interface OfferDetectionOutcome {
+export interface DetectionDiagnostics {
+  waitedMs?: number;
+  attempts?: number;
+  reason?: string;
+}
+
+export interface OfferDetectionResult {
   status: "ok" | "out_of_scope" | "no_offers" | "content_delayed";
   message: string;
   pageType: DetectionPageType;
-  offers: OfferDetectionItem[];
-  diagnostics?: {
-    waitedMs?: number;
-    attempts?: number;
-    reason?: string;
-  };
+  offers: JobOffer[];
+  diagnostics?: DetectionDiagnostics;
 }
+
+export type OfferDetectionOutcome = OfferDetectionResult;

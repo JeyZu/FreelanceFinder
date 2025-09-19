@@ -1,61 +1,356 @@
-const statusContainer = document.getElementById('status');
-const statusEmoji = statusContainer.querySelector('.status-emoji');
-const statusText = document.getElementById('status-text');
-const analyzeButton = document.getElementById('analyze');
-const resetButton = document.getElementById('reset');
-const copyButton = document.getElementById('copy');
-const copyFeedback = document.getElementById('copy-feedback');
-const resultSection = document.getElementById('result');
-const summaryList = document.getElementById('summary');
-const jsonOutput = document.getElementById('json-output');
-const jsonPanel = document.getElementById('json-panel');
-const evidenceToggle = document.getElementById('toggle-evidence');
-const evidenceList = document.getElementById('evidence-list');
-const openTourButton = document.getElementById('open-tour');
-const tourDialog = document.getElementById('tour');
-const tourSteps = Array.from(tourDialog.querySelectorAll('.tour-step'));
-const tourPrev = document.getElementById('tour-prev');
-const tourNext = document.getElementById('tour-next');
-const tourClose = document.getElementById('tour-close');
-
-let activeTabId = null;
-let currentResult = null;
-let retryTimeout = null;
-let isAnalyzing = false;
-let tourIndex = 0;
-let isFreeWorkTab = false;
-
-function setStatus(emoji, text) {
-  statusEmoji.textContent = emoji;
-  statusText.textContent = text;
+// src/popup/dom.ts
+function getElements() {
+  const statusContainer = requireElement(document.getElementById("status"));
+  return {
+    statusContainer,
+    statusEmoji: requireElement(statusContainer.querySelector(".status-emoji")),
+    statusText: requireElement(document.getElementById("status-text")),
+    analyzeButton: requireElement(document.getElementById("analyze")),
+    resetButton: requireElement(document.getElementById("reset")),
+    copyButton: requireElement(document.getElementById("copy")),
+    copyFeedback: requireElement(document.getElementById("copy-feedback")),
+    resultSection: requireElement(document.getElementById("result")),
+    summaryList: requireElement(document.getElementById("summary")),
+    jsonOutput: requireElement(document.getElementById("json-output")),
+    jsonPanel: requireElement(document.getElementById("json-panel")),
+    evidenceToggle: requireElement(document.getElementById("toggle-evidence")),
+    evidenceList: requireElement(document.getElementById("evidence-list")),
+    openTourButton: requireElement(document.getElementById("open-tour")),
+    tourDialog: requireElement(document.getElementById("tour")),
+    tourSteps: Array.from(document.querySelectorAll(".tour-step")),
+    tourPrev: requireElement(document.getElementById("tour-prev")),
+    tourNext: requireElement(document.getElementById("tour-next")),
+    tourClose: requireElement(document.getElementById("tour-close"))
+  };
+}
+function requireElement(value) {
+  if (!value) {
+    throw new Error("popup_element_missing");
+  }
+  return value;
 }
 
-function disableAnalysis() {
-  analyzeButton.disabled = true;
+// src/popup/render.ts
+function setStatus(elements, info) {
+  elements.statusEmoji.textContent = info.emoji;
+  elements.statusText.textContent = info.text;
 }
-
-function enableAnalysis() {
-  analyzeButton.disabled = !isFreeWorkTab;
+function resetView(elements, activeTabId) {
+  elements.resultSection.hidden = true;
+  elements.summaryList.innerHTML = "";
+  elements.jsonOutput.textContent = "";
+  elements.jsonPanel.open = false;
+  elements.copyButton.disabled = true;
+  elements.evidenceToggle.disabled = true;
+  elements.evidenceToggle.setAttribute("aria-expanded", "false");
+  elements.evidenceToggle.textContent = "Voir les indices";
+  elements.evidenceList.hidden = true;
+  elements.evidenceList.innerHTML = "";
+  elements.copyFeedback.textContent = "";
+  elements.resetButton.disabled = true;
+  updateBadge(activeTabId, "");
 }
-
-function resetUiState() {
-  currentResult = null;
-  resultSection.hidden = true;
-  summaryList.innerHTML = '';
-  jsonOutput.textContent = '';
-  jsonPanel.open = false;
-  copyButton.disabled = true;
-  evidenceToggle.disabled = true;
-  evidenceToggle.setAttribute('aria-expanded', 'false');
-  evidenceList.hidden = true;
-  evidenceList.innerHTML = '';
-  copyFeedback.textContent = '';
-  resetButton.disabled = true;
-  if (activeTabId !== null) {
-    chrome.action.setBadgeText({ tabId: activeTabId, text: '' });
+function renderSuccess(elements, result, activeTabId) {
+  elements.resultSection.hidden = false;
+  elements.resetButton.disabled = false;
+  elements.copyButton.disabled = false;
+  renderSummary(elements, result);
+  renderEvidence(elements, result.evidence);
+  renderJson(elements, result.rawJson);
+  updateBadge(activeTabId, result.offersCount > 0 ? String(result.offersCount) : "");
+}
+function renderEvidence(elements, evidence) {
+  elements.evidenceList.innerHTML = "";
+  if (evidence.length === 0) {
+    elements.evidenceToggle.disabled = true;
+    elements.evidenceList.hidden = true;
+    elements.evidenceToggle.setAttribute("aria-expanded", "false");
+    elements.evidenceToggle.textContent = "Voir les indices";
+    return;
+  }
+  elements.evidenceToggle.disabled = false;
+  elements.evidenceList.hidden = true;
+  elements.evidenceToggle.textContent = "Voir les indices";
+  elements.evidenceToggle.setAttribute("aria-expanded", "false");
+  evidence.forEach((entry) => {
+    const item = document.createElement("li");
+    item.textContent = entry;
+    elements.evidenceList.appendChild(item);
+  });
+}
+function renderJson(elements, payload) {
+  elements.jsonOutput.textContent = JSON.stringify(payload, null, 2);
+}
+function renderSummary(elements, result) {
+  elements.summaryList.innerHTML = "";
+  result.summary.items.forEach((item) => {
+    const listItem = document.createElement("li");
+    const strong = document.createElement("strong");
+    strong.textContent = item.label;
+    listItem.appendChild(strong);
+    const textNode = document.createElement("span");
+    textNode.textContent = item.value;
+    listItem.appendChild(textNode);
+    elements.summaryList.appendChild(listItem);
+  });
+}
+function updateBadge(activeTabId, text) {
+  if (activeTabId === null) {
+    return;
+  }
+  chrome.action.setBadgeBackgroundColor({ tabId: activeTabId, color: "#0f766e" });
+  chrome.action.setBadgeText({ tabId: activeTabId, text });
+}
+function toggleEvidence(elements) {
+  const isHidden = elements.evidenceList.hidden;
+  if (isHidden) {
+    elements.evidenceList.hidden = false;
+    elements.evidenceToggle.textContent = "Masquer les indices";
+    elements.evidenceToggle.setAttribute("aria-expanded", "true");
+  } else {
+    elements.evidenceList.hidden = true;
+    elements.evidenceToggle.textContent = "Voir les indices";
+    elements.evidenceToggle.setAttribute("aria-expanded", "false");
   }
 }
+function renderCopyFeedback(elements, message) {
+  elements.copyFeedback.textContent = message;
+}
+function syncTour(elements, index) {
+  elements.tourSteps.forEach((step, position) => {
+    step.hidden = position !== index;
+  });
+  elements.tourPrev.disabled = index === 0;
+  elements.tourNext.textContent = index === elements.tourSteps.length - 1 ? "Terminer" : "Suivant";
+}
 
+// src/popup/status.ts
+function formatStatus(result) {
+  if (!result) {
+    return { emoji: "\u{1F7E1}", text: "Pr\xEAt \xE0 analyser." };
+  }
+  if (result.kind === "detail") {
+    const count = result.offersCount || 1;
+    return { emoji: "\u2705", text: `D\xE9tail d\xE9tect\xE9 (${count} offre)` };
+  }
+  if (result.kind === "list") {
+    const count = result.offersCount || 0;
+    return { emoji: "\u2705", text: `Liste d\xE9tect\xE9e : ${count} offre${count > 1 ? "s" : ""}` };
+  }
+  if (result.kind === "out_of_scope") {
+    return { emoji: "\u26D4", text: "Page hors p\xE9rim\xE8tre FreeWork" };
+  }
+  if (result.kind === "pending") {
+    return { emoji: "\u23F3", text: "Contenu en cours de chargement, r\xE9essayez." };
+  }
+  if (result.kind === "none") {
+    const reason = result.reason ? ` \u2014 ${capitalizeFirst(result.reason)}` : "";
+    return { emoji: "\u26A0\uFE0F", text: `Aucune offre d\xE9tectable${reason}` };
+  }
+  return { emoji: "\u26A0\uFE0F", text: "Aucune offre d\xE9tectable." };
+}
+function capitalizeFirst(text) {
+  if (!text) {
+    return "";
+  }
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+// src/popup/state.ts
+var state = {
+  activeTabId: null,
+  currentResult: null,
+  isAnalyzing: false,
+  retryTimeoutId: null,
+  isFreeWorkTab: false,
+  tourIndex: 0
+};
+function getState() {
+  return state;
+}
+function setActiveTab(tabId) {
+  state.activeTabId = tabId;
+}
+function setFreeWorkTab(value) {
+  state.isFreeWorkTab = value;
+}
+function setAnalyzing(value) {
+  state.isAnalyzing = value;
+}
+function setCurrentResult(result) {
+  state.currentResult = result;
+}
+function scheduleRetry(callback, delayMs) {
+  clearRetry();
+  state.retryTimeoutId = setTimeout(callback, delayMs);
+}
+function clearRetry() {
+  if (state.retryTimeoutId) {
+    clearTimeout(state.retryTimeoutId);
+    state.retryTimeoutId = null;
+  }
+}
+function setTourIndex(value) {
+  state.tourIndex = value;
+}
+
+// src/popup/actions.ts
+var MESSAGE_TYPE = "FREELANCEFINDER_ANALYZE";
+var MAX_RETRY_ATTEMPTS = 3;
+var RETRY_DELAY_MS = 1200;
+var COPY_FEEDBACK_TIMEOUT_MS = 2e3;
+async function setupPopup(elements) {
+  registerEventListeners(elements);
+  await initialize(elements);
+}
+function registerEventListeners(elements) {
+  elements.analyzeButton.addEventListener("click", () => handleAnalyze(elements));
+  elements.resetButton.addEventListener("click", () => handleReset(elements));
+  elements.copyButton.addEventListener("click", () => handleCopy(elements));
+  elements.evidenceToggle.addEventListener("click", () => toggleEvidence(elements));
+  elements.openTourButton.addEventListener("click", () => openTour(elements));
+  elements.tourPrev.addEventListener("click", () => previousTourStep(elements));
+  elements.tourNext.addEventListener("click", () => nextTourStep(elements));
+  elements.tourClose.addEventListener("click", () => elements.tourDialog.close());
+  elements.tourDialog.addEventListener("cancel", () => elements.tourDialog.close());
+}
+async function initialize(elements) {
+  const tab = await getActiveTab();
+  if (!tab) {
+    setStatus(elements, { emoji: "\u26A0\uFE0F", text: "Onglet actif introuvable." });
+    elements.analyzeButton.disabled = true;
+    elements.resetButton.disabled = false;
+    return;
+  }
+  setActiveTab(tab.id ?? null);
+  const url = tab.url ?? "";
+  const isFreeWorkTab = isFreeWorkUrl(url);
+  setFreeWorkTab(isFreeWorkTab);
+  if (!isFreeWorkTab) {
+    setStatus(elements, { emoji: "\u26D4", text: "Page hors p\xE9rim\xE8tre FreeWork" });
+    elements.analyzeButton.disabled = true;
+    elements.resetButton.disabled = false;
+    return;
+  }
+  setStatus(elements, { emoji: "\u{1F7E1}", text: "Pr\xEAt \xE0 analyser cette page FreeWork." });
+  elements.analyzeButton.disabled = false;
+}
+function handleAnalyze(elements) {
+  const state2 = getState();
+  if (state2.isAnalyzing || state2.activeTabId === null) {
+    return;
+  }
+  clearRetry();
+  setAnalyzing(true);
+  setStatus(elements, { emoji: "\u{1F50D}", text: "Analyse en cours\u2026" });
+  elements.resetButton.disabled = false;
+  elements.analyzeButton.disabled = true;
+  requestAnalysis(elements, 1);
+}
+function requestAnalysis(elements, attempt) {
+  const state2 = getState();
+  if (state2.activeTabId === null) {
+    finalizeAnalysis(elements, { kind: "none", reason: "onglet inactif", evidence: [] });
+    return;
+  }
+  sendMessage(state2.activeTabId, { type: MESSAGE_TYPE }).then((response) => {
+    if (!response) {
+      throw new Error("no_response");
+    }
+    if (response.kind === "pending" && attempt < MAX_RETRY_ATTEMPTS) {
+      setStatus(elements, formatStatus(response));
+      scheduleRetry(() => requestAnalysis(elements, attempt + 1), RETRY_DELAY_MS);
+      return;
+    }
+    finalizeAnalysis(elements, response);
+  }).catch(() => {
+    setStatus(elements, { emoji: "\u26A0\uFE0F", text: "Aucune offre d\xE9tectable \u2014 contenu inaccessible." });
+    elements.analyzeButton.disabled = !getState().isFreeWorkTab;
+    setAnalyzing(false);
+  });
+}
+function finalizeAnalysis(elements, result) {
+  clearRetry();
+  setCurrentResult(result);
+  const statusInfo = formatStatus(result);
+  setStatus(elements, statusInfo);
+  const state2 = getState();
+  if (isSuccessResult(result)) {
+    renderSuccess(elements, result, state2.activeTabId);
+  } else {
+    elements.resetButton.disabled = false;
+    elements.resultSection.hidden = true;
+    elements.copyButton.disabled = true;
+    updateBadge(state2.activeTabId, "");
+  }
+  elements.analyzeButton.disabled = !state2.isFreeWorkTab;
+  setAnalyzing(false);
+}
+function handleReset(elements) {
+  clearRetry();
+  setCurrentResult(null);
+  resetView(elements, getState().activeTabId);
+  const state2 = getState();
+  if (state2.isFreeWorkTab) {
+    setStatus(elements, { emoji: "\u{1F7E1}", text: "Pr\xEAt \xE0 analyser cette page FreeWork." });
+    elements.analyzeButton.disabled = false;
+  } else {
+    setStatus(elements, { emoji: "\u26D4", text: "Page hors p\xE9rim\xE8tre FreeWork" });
+    elements.analyzeButton.disabled = true;
+  }
+  setAnalyzing(false);
+}
+function handleCopy(elements) {
+  const state2 = getState();
+  if (!isSuccessResult(state2.currentResult)) {
+    return;
+  }
+  const jsonString = JSON.stringify(state2.currentResult.rawJson, null, 2);
+  navigator.clipboard.writeText(jsonString).then(() => {
+    renderCopyFeedback(elements, "JSON copi\xE9 dans le presse-papier.");
+    setTimeout(() => renderCopyFeedback(elements, ""), COPY_FEEDBACK_TIMEOUT_MS);
+  }).catch(() => {
+    renderCopyFeedback(elements, "Impossible de copier automatiquement.");
+  });
+}
+function openTour(elements) {
+  setTourIndex(0);
+  syncTour(elements, 0);
+  if (typeof elements.tourDialog.showModal === "function") {
+    elements.tourDialog.showModal();
+  }
+}
+function nextTourStep(elements) {
+  const state2 = getState();
+  const lastIndex = elements.tourSteps.length - 1;
+  if (state2.tourIndex < lastIndex) {
+    const nextIndex = state2.tourIndex + 1;
+    setTourIndex(nextIndex);
+    syncTour(elements, nextIndex);
+    return;
+  }
+  elements.tourDialog.close();
+}
+function previousTourStep(elements) {
+  const state2 = getState();
+  if (state2.tourIndex === 0) {
+    return;
+  }
+  const previousIndex = state2.tourIndex - 1;
+  setTourIndex(previousIndex);
+  syncTour(elements, previousIndex);
+}
+function isFreeWorkUrl(url) {
+  if (!url) {
+    return false;
+  }
+  try {
+    const hostname = new URL(url).hostname;
+    return hostname.endsWith("free-work.com");
+  } catch (error) {
+    return false;
+  }
+}
 async function getActiveTab() {
   const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   if (tabs && tabs.length > 0) {
@@ -63,289 +358,31 @@ async function getActiveTab() {
   }
   return null;
 }
-
-function isFreeWorkUrl(url) {
-  try {
-    const { hostname } = new URL(url);
-    return hostname.endsWith('free-work.com');
-  } catch (error) {
-    return false;
-  }
-}
-
-function renderSummary(summary) {
-  summaryList.innerHTML = '';
-  if (!summary || !Array.isArray(summary.items)) {
-    return;
-  }
-
-  summary.items.forEach((item) => {
-    const listItem = document.createElement('li');
-    const strong = document.createElement('strong');
-    strong.textContent = item.label;
-    listItem.appendChild(strong);
-    const textNode = document.createElement('span');
-    textNode.textContent = item.value;
-    listItem.appendChild(textNode);
-    summaryList.appendChild(listItem);
-  });
-}
-
-function renderEvidence(evidence) {
-  evidenceList.innerHTML = '';
-  if (!Array.isArray(evidence) || evidence.length === 0) {
-    evidenceToggle.disabled = true;
-    evidenceList.hidden = true;
-    return;
-  }
-
-  evidenceToggle.disabled = false;
-  evidence.forEach((entry) => {
-    const item = document.createElement('li');
-    item.textContent = entry;
-    evidenceList.appendChild(item);
-  });
-}
-
-function formatStatus(result) {
-  if (!result) {
-    return { emoji: '🟡', text: 'Prêt à analyser.' };
-  }
-
-  if (result.kind === 'detail') {
-    const count = result.offersCount || 1;
-    return { emoji: '✅', text: `Détail détecté (${count} offre)` };
-  }
-
-  if (result.kind === 'list') {
-    const count = result.offersCount || 0;
-    return { emoji: '✅', text: `Liste détectée : ${count} offre${count > 1 ? 's' : ''}` };
-  }
-
-  if (result.kind === 'out_of_scope') {
-    return { emoji: '⛔', text: 'Page hors périmètre FreeWork' };
-  }
-
-  if (result.kind === 'pending') {
-    return { emoji: '⏳', text: 'Contenu en cours de chargement, réessayez.' };
-  }
-
-  if (result.kind === 'none') {
-    const reason = result.reason ? ` — ${capitalizeFirst(result.reason)}` : '';
-    return { emoji: '⚠️', text: `Aucune offre détectable${reason}` };
-  }
-
-  return { emoji: '⚠️', text: 'Aucune offre détectable.' };
-}
-
-function capitalizeFirst(text) {
-  if (!text) {
-    return '';
-  }
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
-function showResult(result) {
-  currentResult = result;
-  resultSection.hidden = false;
-  renderSummary(result.summary);
-  renderEvidence(result.evidence);
-  jsonOutput.textContent = JSON.stringify(result.rawJson, null, 2);
-  copyButton.disabled = false;
-  resetButton.disabled = false;
-  evidenceToggle.setAttribute('aria-expanded', 'false');
-  evidenceList.hidden = true;
-
-  const badgeText = result.offersCount && result.offersCount > 0 ? String(result.offersCount) : '';
-  if (activeTabId !== null) {
-    chrome.action.setBadgeBackgroundColor({ tabId: activeTabId, color: '#0f766e' });
-    chrome.action.setBadgeText({ tabId: activeTabId, text: badgeText });
-  }
-}
-
-async function requestAnalysis(attempt = 1) {
-  if (activeTabId === null) {
-    return;
-  }
-
-  try {
-    const response = await chrome.tabs.sendMessage(activeTabId, { type: 'FREELANCEFINDER_ANALYZE' });
-
-    if (!response) {
-      throw new Error('no_response');
-    }
-
-    if (response.kind === 'pending' && attempt < 3) {
-      const statusInfo = formatStatus(response);
-      setStatus(statusInfo.emoji, statusInfo.text);
-      retryTimeout = setTimeout(() => {
-        requestAnalysis(attempt + 1);
-      }, 1200);
-      return;
-    }
-
-    finalizeAnalysis(response);
-  } catch (error) {
-    const statusInfo = { emoji: '⚠️', text: "Aucune offre détectable — contenu inaccessible." };
-    setStatus(statusInfo.emoji, statusInfo.text);
-    enableAnalysis();
-    isAnalyzing = false;
-  }
-}
-
-function finalizeAnalysis(result) {
-  const statusInfo = formatStatus(result);
-  setStatus(statusInfo.emoji, statusInfo.text);
-
-  if (result.kind === 'detail' || result.kind === 'list') {
-    showResult(result);
-  } else {
-    resetButton.disabled = false;
-    resultSection.hidden = true;
-    if (activeTabId !== null) {
-      chrome.action.setBadgeText({ tabId: activeTabId, text: '' });
-    }
-  }
-
-  enableAnalysis();
-  isAnalyzing = false;
-}
-
-function handleAnalyze() {
-  if (isAnalyzing) {
-    return;
-  }
-
-  if (retryTimeout) {
-    clearTimeout(retryTimeout);
-    retryTimeout = null;
-  }
-
-  isAnalyzing = true;
-  setStatus('🔍', 'Analyse en cours…');
-  enableResetDuringAnalysis();
-  disableAnalysis();
-  requestAnalysis();
-}
-
-function enableResetDuringAnalysis() {
-  resetButton.disabled = false;
-}
-
-function handleReset() {
-  if (retryTimeout) {
-    clearTimeout(retryTimeout);
-    retryTimeout = null;
-  }
-  resetUiState();
-  if (isFreeWorkTab) {
-    setStatus('🟡', 'Prêt à analyser une page FreeWork.');
-  } else {
-    setStatus('⛔', 'Page hors périmètre FreeWork');
-  }
-  enableAnalysis();
-  isAnalyzing = false;
-}
-
-async function init() {
-  const tab = await getActiveTab();
-
-  if (!tab) {
-    setStatus('⚠️', 'Onglet actif introuvable.');
-    disableAnalysis();
-    return;
-  }
-
-  activeTabId = tab.id;
-  isFreeWorkTab = isFreeWorkUrl(tab.url || '');
-
-  if (!isFreeWorkTab) {
-    setStatus('⛔', 'Page hors périmètre FreeWork');
-    disableAnalysis();
-    resetButton.disabled = false;
-    return;
-  }
-
-  setStatus('🟡', 'Prêt à analyser cette page FreeWork.');
-  enableAnalysis();
-}
-
-function handleCopy() {
-  if (!currentResult) {
-    return;
-  }
-
-  const jsonString = JSON.stringify(currentResult.rawJson, null, 2);
-  navigator.clipboard
-    .writeText(jsonString)
-    .then(() => {
-      copyFeedback.textContent = 'JSON copié dans le presse-papier.';
-      setTimeout(() => {
-        copyFeedback.textContent = '';
-      }, 2000);
-    })
-    .catch(() => {
-      copyFeedback.textContent = 'Impossible de copier automatiquement.';
+function sendMessage(tabId, payload) {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.sendMessage(tabId, payload, (response) => {
+      const lastError = chrome.runtime.lastError;
+      if (lastError) {
+        reject(new Error(lastError.message));
+        return;
+      }
+      resolve(response);
     });
-}
-
-function toggleEvidence() {
-  const isHidden = evidenceList.hidden;
-  if (isHidden) {
-    evidenceList.hidden = false;
-    evidenceToggle.textContent = 'Masquer les indices';
-    evidenceToggle.setAttribute('aria-expanded', 'true');
-  } else {
-    evidenceList.hidden = true;
-    evidenceToggle.textContent = 'Voir les indices';
-    evidenceToggle.setAttribute('aria-expanded', 'false');
-  }
-}
-
-function openTour() {
-  tourIndex = 0;
-  syncTour();
-  if (typeof tourDialog.showModal === 'function') {
-    tourDialog.showModal();
-  }
-}
-
-function syncTour() {
-  tourSteps.forEach((step, index) => {
-    step.hidden = index !== tourIndex;
   });
-  tourPrev.disabled = tourIndex === 0;
-  tourNext.textContent = tourIndex === tourSteps.length - 1 ? 'Terminer' : 'Suivant';
+}
+function isSuccessResult(result) {
+  return result !== null && (result.kind === "detail" || result.kind === "list");
 }
 
-function nextTourStep() {
-  if (tourIndex < tourSteps.length - 1) {
-    tourIndex += 1;
-    syncTour();
-    return;
+// src/popup/popup.ts
+async function bootstrap() {
+  try {
+    const elements = getElements();
+    await setupPopup(elements);
+  } catch (error) {
+    console.error("popup_init_failed", error);
   }
-  tourDialog.close();
 }
-
-function previousTourStep() {
-  if (tourIndex === 0) {
-    return;
-  }
-  tourIndex -= 1;
-  syncTour();
-}
-
-openTourButton.addEventListener('click', openTour);
-analyzeButton.addEventListener('click', handleAnalyze);
-resetButton.addEventListener('click', handleReset);
-copyButton.addEventListener('click', handleCopy);
-evidenceToggle.addEventListener('click', toggleEvidence);
-tourPrev.addEventListener('click', previousTourStep);
-tourNext.addEventListener('click', nextTourStep);
-tourClose.addEventListener('click', () => tourDialog.close());
-tourDialog.addEventListener('cancel', () => tourDialog.close());
-
-document.addEventListener('DOMContentLoaded', () => {
-  init();
+document.addEventListener("DOMContentLoaded", () => {
+  void bootstrap();
 });
-

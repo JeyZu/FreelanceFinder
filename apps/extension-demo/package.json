@@ -1,0 +1,22 @@
+{
+  "name": "@freelancefinder/extension-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsup --config tsup.config.ts && cp dist/content-script.js ./content-script.js && cp dist/popup/popup.js ./popup.js && cp dist/detector-entry.js ./detector.js",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@freelancefinder/detectors": "workspace:*",
+    "@freelancefinder/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@freelancefinder/config": "workspace:*",
+    "@types/chrome": "^0.0.255",
+    "esbuild-plugin-alias": "^0.2.1",
+    "tsup": "^8.0.1",
+    "vitest": "^1.5.0"
+  }
+}

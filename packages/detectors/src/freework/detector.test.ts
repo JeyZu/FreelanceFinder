@@ -201,4 +201,18 @@ describe("detectFreeWorkOffers", () => {
     expect(result.message).toMatch(/Aucune offre détectable/i);
     expect(result.diagnostics?.reason).toBeDefined();
   });
+
+  it("reports content_delayed when structure is still loading", async () => {
+    const doc = createDom(`<div class="placeholder">Chargement…</div>`, detailUrl);
+
+    const result = await detectFreeWorkOffers(doc, {
+      url: detailUrl,
+      maxWaitMs: 20,
+      pollIntervalMs: 10,
+    });
+
+    expect(result.status).toBe("content_delayed");
+    expect(result.message).toMatch(/contenu tardif/i);
+    expect(result.diagnostics?.reason).toBe("contenu tardif");
+  });
 });

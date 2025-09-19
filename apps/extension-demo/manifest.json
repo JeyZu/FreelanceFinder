@@ -15,5 +15,11 @@
       "js": ["content-script.js"],
       "run_at": "document_idle"
     }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["detector.js"],
+      "matches": ["https://*.free-work.com/*"]
+    }
   ]
 }
