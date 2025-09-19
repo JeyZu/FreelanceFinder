@@ -1,0 +1,21 @@
+{
+  "name": "@freelancefinder/detectors",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+  },
+  "devDependencies": {
+    "@freelancefinder/config": "workspace:*",
+    "@freelancefinder/types": "workspace:*",
+    "@types/jsdom": "^21.1.7",
+    "@types/node": "^20.12.7",
+    "jsdom": "^24.0.0",
+    "vitest": "^1.5.0"
+  }
+}
