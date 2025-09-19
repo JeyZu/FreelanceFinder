@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FreelanceFinder Demo</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main>
+      <header class="header">
+        <div id="status" class="status" role="status" aria-live="polite">
+          <span class="status-emoji" aria-hidden="true">🟡</span>
+          <span id="status-text">Préparez-vous à analyser une page FreeWork.</span>
+        </div>
+        <button id="open-tour" class="link-button" type="button">Tutoriel express</button>
+      </header>
+
+      <section class="actions">
+        <button id="analyze" class="primary" type="button">Analyser cette page</button>
+        <button id="reset" class="secondary" type="button" disabled>Réinitialiser</button>
+      </section>
+
+      <section id="result" class="result" aria-live="polite" hidden>
+        <h2 class="section-title">Résumé</h2>
+        <ul id="summary" class="summary" aria-label="Synthèse des offres"></ul>
+
+        <details id="json-panel" class="json-panel">
+          <summary>Voir le JSON brut</summary>
+          <pre id="json-output" class="json-output" tabindex="0"></pre>
+          <div class="json-actions">
+            <button id="copy" class="secondary" type="button" disabled>Copier JSON</button>
+            <span id="copy-feedback" class="copy-feedback" role="status" aria-live="polite"></span>
+          </div>
+        </details>
+
+        <div class="evidence">
+          <button id="toggle-evidence" class="link-button" type="button" disabled>
+            Voir les indices
+          </button>
+          <ul id="evidence-list" class="evidence-list" hidden aria-label="Indices utilisés pour la détection"></ul>
+        </div>
+      </section>
+
+      <section class="footer-hint">
+        <p class="privacy">🔒 Traitement local uniquement. Aucune donnée n'est envoyée.</p>
+      </section>
+    </main>
+
+    <dialog id="tour" class="tour-dialog" aria-labelledby="tour-title">
+      <form method="dialog" class="tour-content">
+        <h2 id="tour-title">Mode démo</h2>
+        <div class="tour-step" data-step="0">
+          <h3>1. Installer</h3>
+          <p>Ouvrez les extensions Chrome, activez le mode développeur puis cliquez sur « Charger l'extension non empaquetée ».</p>
+        </div>
+        <div class="tour-step" data-step="1" hidden>
+          <h3>2. Aller sur FreeWork</h3>
+          <p>Visitez une page liste ou détail sur <strong>free-work.com</strong>.</p>
+        </div>
+        <div class="tour-step" data-step="2" hidden>
+          <h3>3. Analyser</h3>
+          <p>Cliquez sur l'icône FreelanceFinder puis sur « Analyser cette page » pour voir le résultat.</p>
+        </div>
+        <div class="tour-actions">
+          <button id="tour-prev" class="secondary" type="button">Précédent</button>
+          <button id="tour-next" class="primary" type="button">Suivant</button>
+          <button id="tour-close" class="link-button" value="close">Fermer</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="popup.js" type="module"></script>
+  </body>
+</html>
